@@ -1,36 +1,64 @@
 import { useEffect, useMemo, useState } from "react";
 
 const theme = {
-  bg: "#0f172a",
-  card: "#1e293b",
-  primary: "#38bdf8",
+  bg: "#0b1220",
+  card: "#121a2b",
+  cardSoft: "#16213a",
+  primary: "#4cc9f0",
   warning: "#facc15",
   danger: "#f87171",
   text: "#e5e7eb",
-  muted: "#94a3b8",
+  muted: "#9ca3af",
+  border: "#24324d",
+};
+
+const styles = {
+  h1: { fontSize: 22, fontWeight: 700, marginBottom: 4 },
+  h2: { fontSize: 16, fontWeight: 600, marginBottom: 8 },
+  label: { fontSize: 12, color: theme.muted, marginBottom: 4 },
+  input: {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${theme.border}`,
+    background: theme.card,
+    color: theme.text,
+    fontSize: 14,
+  },
+  buttonPrimary: {
+    width: "100%",
+    padding: "12px",
+    borderRadius: 12,
+    background: theme.primary,
+    color: "#020617",
+    fontSize: 15,
+    fontWeight: 600,
+  },
+  buttonSecondary: {
+    padding: "8px 10px",
+    borderRadius: 10,
+    background: theme.card,
+    color: theme.text,
+    fontSize: 12,
+  },
 };
 
 export default function App() {
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  /* ---------------- state ---------------- */
-  const [month, setMonth] = useState(
-    localStorage.getItem("month") || currentMonth
-  );
+  const [month, setMonth] = useState(localStorage.getItem("month") || currentMonth);
 
-  const [categories, setCategories] = useState(() => {
-    return (
-      JSON.parse(localStorage.getItem("categories")) || {
-        Food: 8000,
-        Rent: 15000,
-        Transport: 3000,
-      }
-    );
-  });
+  const [categories, setCategories] = useState(() => (
+    JSON.parse(localStorage.getItem("categories")) || {
+      Food: 8000,
+      Rent: 15000,
+      Transport: 3000,
+    }
+  ));
 
-  const [expenses, setExpenses] = useState(() => {
-    return JSON.parse(localStorage.getItem("expenses")) || [];
-  });
+  const [expenses, setExpenses] = useState(() => (
+    JSON.parse(localStorage.getItem("expenses")) || []
+  ));
 
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(Object.keys(categories)[0]);
@@ -38,26 +66,21 @@ export default function App() {
   const [newCategory, setNewCategory] = useState("");
   const [newBudget, setNewBudget] = useState("");
 
-  /* ---------------- persistence ---------------- */
   useEffect(() => {
     localStorage.setItem("expenses", JSON.stringify(expenses));
     localStorage.setItem("categories", JSON.stringify(categories));
     localStorage.setItem("month", month);
   }, [expenses, categories, month]);
 
-  /* ---------------- monthly reset ---------------- */
   const resetMonth = () => {
     if (!window.confirm("Start a new month? All expenses will be cleared.")) return;
     setExpenses([]);
     setMonth(currentMonth);
   };
 
-  /* ---------------- expense ops ---------------- */
   const addExpense = () => {
     if (!amount) return;
-
     const now = new Date();
-
     setExpenses([
       ...expenses,
       {
@@ -69,34 +92,26 @@ export default function App() {
         note,
       },
     ]);
-
     setAmount("");
     setNote("");
   };
 
-  const deleteExpense = (id) => {
-    setExpenses(expenses.filter((e) => e.id !== id));
-  };
+  const deleteExpense = (id) => setExpenses(expenses.filter((e) => e.id !== id));
 
-  /* ---------------- category ops ---------------- */
   const addCategory = () => {
     if (!newCategory || !newBudget) return;
-    setCategories({
-      ...categories,
-      [newCategory]: +newBudget,
-    });
+    setCategories({ ...categories, [newCategory]: +newBudget });
     setNewCategory("");
     setNewBudget("");
   };
 
   const removeCategory = (cat) => {
-    if (!window.confirm(`Delete category \"${cat}\"? Related expenses will remain.`)) return;
+    if (!window.confirm(`Delete category "${cat}"?`)) return;
     const updated = { ...categories };
     delete updated[cat];
     setCategories(updated);
   };
 
-  /* ---------------- calculations ---------------- */
   const spentByCategory = useMemo(() => {
     const map = {};
     expenses.forEach((e) => {
@@ -105,7 +120,6 @@ export default function App() {
     return map;
   }, [expenses]);
 
-  /* ---------------- export ---------------- */
   const exportCSV = () => {
     let csv = "Date,Time,Amount,Category,Note\n";
     expenses.forEach((e) => {
@@ -120,128 +134,89 @@ export default function App() {
   };
 
   return (
-    <div
-      style={{
-        background: theme.bg,
-        minHeight: "100vh",
-        color: theme.text,
-        padding: 16,
-        maxWidth: 420,
-        margin: "auto",
-      }}
-    >
-      <h2>Expense Tracker</h2>
-      <p style={{ color: theme.muted }}>{month}</p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <button onClick={resetMonth}>🔄 New Month</button>
-        <button onClick={exportCSV}>⬇ Export</button>
-      </div>
-
-      {/* ADD EXPENSE */}
-      <div style={{ background: theme.card, padding: 12, borderRadius: 8 }}>
-        <h3>Add Expense</h3>
-
-        <input
-          placeholder="Amount"
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          {Object.keys(categories).map((c) => (
-            <option key={c}>{c}</option>
-          ))}
-        </select>
-
-        <input
-          placeholder="Note (optional)"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
-
-        <button onClick={addExpense}>Add Expense</button>
-      </div>
-
-      {/* STATUS */}
-      <h3 style={{ marginTop: 20 }}>Budgets</h3>
-      {Object.keys(categories).map((c) => {
-        const spent = spentByCategory[c] || 0;
-        const budget = categories[c];
-        const pct = spent / budget;
-
-        let color = theme.primary;
-        if (pct > 0.9) color = theme.danger;
-        else if (pct > 0.75) color = theme.warning;
-
-        return (
-          <div key={c} style={{ marginBottom: 12 }}>
-            <strong>{c}</strong> — ₹{budget - spent} left
-            <input
-              type="number"
-              value={budget}
-              onChange={(e) =>
-                setCategories({
-                  ...categories,
-                  [c]: +e.target.value,
-                })
-              }
-            />
-            <div style={{ height: 6, background: "#334155", marginTop: 4 }}>
-              <div
-                style={{
-                  width: `${Math.min(pct * 100, 100)}%`,
-                  height: "100%",
-                  background: color,
-                }}
-              />
-            </div>
-            <button onClick={() => removeCategory(c)}>🗑 Remove</button>
-          </div>
-        );
-      })}
-
-      {/* ADD CATEGORY */}
-      <div style={{ background: theme.card, padding: 12, borderRadius: 8 }}>
-        <h3>Add Category</h3>
-        <input
-          placeholder="Category name"
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-        />
-        <input
-          placeholder="Monthly budget"
-          type="number"
-          value={newBudget}
-          onChange={(e) => setNewBudget(e.target.value)}
-        />
-        <button onClick={addCategory}>Add Category</button>
-      </div>
-
-      {/* EXPENSE LIST */}
-      <h3 style={{ marginTop: 20 }}>Expenses</h3>
-      {expenses.map((e) => (
-        <div
-          key={e.id}
-          style={{
-            background: theme.card,
-            padding: 8,
-            borderRadius: 6,
-            marginBottom: 6,
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
-          <div>
-            <strong>₹{e.amount}</strong> · {e.category}
-            <div style={{ fontSize: 12, color: theme.muted }}>
-              {e.date} at {e.time} — {e.note}
-            </div>
-          </div>
-          <button onClick={() => deleteExpense(e.id)}>❌</button>
+    <div style={{ background: theme.bg, minHeight: "100vh", padding: 16, color: theme.text }}>
+      <div style={{ maxWidth: 420, margin: "auto" }}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={styles.h1}>Expense Tracker</div>
+          <div style={{ fontSize: 12, color: theme.muted }}>{month}</div>
         </div>
-      ))}
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          <button style={styles.buttonSecondary} onClick={resetMonth}>New Month</button>
+          <button style={styles.buttonSecondary} onClick={exportCSV}>Export</button>
+        </div>
+
+        {/* ADD EXPENSE */}
+        <div style={{ background: theme.cardSoft, padding: 16, borderRadius: 16, marginBottom: 24 }}>
+          <div style={styles.h2}>Add Expense</div>
+
+          <div style={styles.label}>Amount</div>
+          <input style={styles.input} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={styles.label}>Category</div>
+              <select style={styles.input} value={category} onChange={(e) => setCategory(e.target.value)}>
+                {Object.keys(categories).map((c) => (<option key={c}>{c}</option>))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <div style={styles.label}>Note</div>
+            <input style={styles.input} value={note} onChange={(e) => setNote(e.target.value)} />
+          </div>
+
+          <button style={{ ...styles.buttonPrimary, marginTop: 16 }} onClick={addExpense}>Add Expense</button>
+        </div>
+
+        {/* BUDGETS */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={styles.h2}>Budgets</div>
+          {Object.keys(categories).map((c) => {
+            const spent = spentByCategory[c] || 0;
+            const budget = categories[c];
+            const pct = spent / budget;
+            let color = theme.primary;
+            if (pct > 0.9) color = theme.danger;
+            else if (pct > 0.75) color = theme.warning;
+
+            return (
+              <div key={c} style={{ marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                  <strong>{c}</strong>
+                  <span>₹{budget - spent}</span>
+                </div>
+                <input style={{ ...styles.input, marginTop: 6 }} type="number" value={budget} onChange={(e) => setCategories({ ...categories, [c]: +e.target.value })} />
+                <div style={{ height: 6, background: theme.border, marginTop: 6, borderRadius: 6 }}>
+                  <div style={{ width: `${Math.min(pct * 100, 100)}%`, height: "100%", background: color, borderRadius: 6 }} />
+                </div>
+                <button style={{ ...styles.buttonSecondary, marginTop: 6 }} onClick={() => removeCategory(c)}>Remove</button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ADD CATEGORY */}
+        <div style={{ background: theme.card, padding: 14, borderRadius: 14, marginBottom: 24 }}>
+          <div style={styles.h2}>Add Category</div>
+          <input style={styles.input} placeholder="Category name" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} />
+          <input style={{ ...styles.input, marginTop: 8 }} type="number" placeholder="Monthly budget" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} />
+          <button style={{ ...styles.buttonPrimary, marginTop: 12 }} onClick={addCategory}>Add Category</button>
+        </div>
+
+        {/* EXPENSE LIST */}
+        <div>
+          <div style={styles.h2}>Expenses</div>
+          {expenses.map((e) => (
+            <div key={e.id} style={{ background: theme.card, padding: 12, borderRadius: 14, marginBottom: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>₹{e.amount} · {e.category}</div>
+              <div style={{ fontSize: 12, color: theme.muted, marginTop: 2 }}>{e.date} at {e.time}{e.note ? ` · ${e.note}` : ""}</div>
+              <button style={{ ...styles.buttonSecondary, marginTop: 6 }} onClick={() => deleteExpense(e.id)}>Delete</button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
